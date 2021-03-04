@@ -8,7 +8,7 @@ require (
 	github.com/go-delve/delve v1.6.0 // indirect
 	github.com/go-git/go-git/v5 v5.2.0
 	github.com/go-openapi/spec v0.20.3 // indirect
-	github.com/go-playground/validator/v10 v10.4.1 // indirect
+	github.com/go-playground/validator/v10 v10.4.1
 	github.com/labstack/gommon v0.3.0
 	github.com/leodido/go-urn v1.2.1 // indirect
 	github.com/magefile/mage v1.11.0 // indirect
