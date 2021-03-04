@@ -27,7 +27,7 @@ FROM dependency-cache AS build
 ENV GOPATH /go
 ENV PATH $GOPATH/bin:$PATH
 COPY . .
-RUN make shell-go-generate-build
+RUN make shell-go-build
 
 FROM debian:10 as production
 ENV GOPATH /go

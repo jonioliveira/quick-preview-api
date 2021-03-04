@@ -8,7 +8,6 @@ services:
       GOLANGCI_LINT_CACHE: /.cache/golangci-lint
     command:
       - make
-      - shell-go-generate
       - shell-go-run
     volumes:
       - $PROJECT_ROOT:/opt/app/
