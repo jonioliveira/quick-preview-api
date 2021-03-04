@@ -7,7 +7,7 @@ require (
 	github.com/fatih/color v1.10.0
 	github.com/gin-gonic/gin v1.6.3
 	github.com/go-openapi/spec v0.20.3 // indirect
-	github.com/go-playground/validator/v10 v10.4.1 // indirect
+	github.com/go-playground/validator/v10 v10.4.1
 	github.com/golang/protobuf v1.4.3 // indirect
 	github.com/json-iterator/go v1.1.10 // indirect
 	github.com/labstack/gommon v0.3.0
@@ -28,5 +28,7 @@ require (
 	golang.org/x/term v0.0.0-20210220032956-6a3ed077a48d // indirect
 	golang.org/x/tools v0.1.0 // indirect
 	google.golang.org/protobuf v1.25.0 // indirect
+	gopkg.in/src-d/go-billy.v4 v4.3.2
+	gopkg.in/src-d/go-git.v4 v4.13.1
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
