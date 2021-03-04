@@ -1,89 +1,235 @@
-GOCMD=go
-GOTEST=$(GOCMD) test
-GOVET=$(GOCMD) vet
-BINARY_NAME=quick-preview-api
-VERSION?=0.0.1
-SERVICE_PORT?=3000
-DOCKER_REGISTRY?= #if set it should finished by /
-EXPORT_RESULT?=false # for CI please set EXPORT_RESULT to true
 
-GREEN  := $(shell tput -Txterm setaf 2)
-YELLOW := $(shell tput -Txterm setaf 3)
-WHITE  := $(shell tput -Txterm setaf 7)
-RESET  := $(shell tput -Txterm sgr0)
+.DEFAULT_GOAL := help
 
-.PHONY: all test build vendor
+export LC_ALL=en_US.UTF-8
+export PROJECT_ROOT=$(shell pwd)
+export PATH=$(shell (echo "$$(go env GOPATH 2> /dev/null)/bin:" || echo ""))$(shell echo $$PATH)
+export REPOSITORY?=quickpreview/api
+export VERSION?=dev-latest
 
-all: help
+GO_LDFLAGS=-ldflags ""
+# By default -count=1 for no cache.
+# -p number of paralel processes allowed
+GO_TEST_FLAGS?=-count=1 -p=4
+PORT?=8081
+DOCKER_LOCAL_IMAGE=$(REPOSITORY):dev-local
+DOCKER_DEV_BUILD=docker build -f build/package/Dockerfile --target development --tag $(DOCKER_LOCAL_IMAGE) --build-arg VERSION .
+DOCKER_RUN_BASE=docker run --rm -v $$PROJECT_ROOT:/opt/app/ -v /opt/app/bin -v $$PROJECT_ROOT/.cache/:/.cache/ -p $(PORT):8080 -e GOCACHE=/.cache/go-build -e GOLANGCI_LINT_CACHE=/.cache/golangci-lint
+DOCKER_DEV_RUN=$(DOCKER_RUN_BASE) $(DOCKER_LOCAL_IMAGE)
+DOCKER_DEV_RUN_IT=$(DOCKER_RUN_BASE) -it $(DOCKER_LOCAL_IMAGE)
+DOCKER_COMPOSE=docker-compose -f deployments/docker/compose.yaml -p quick-preview-api
 
-build: ## Build your project and put the output binary in out/bin/
-	mkdir -p out/bin
-	GO111MODULE=on $(GOCMD) build -mod vendor -o out/bin/$(BINARY_NAME) cmd/quick-preview/main.go
+## General
 
-clean: ## Remove build related file
-	rm -fr ./bin
-	rm -fr ./out
-	rm -f ./junit-report.xml checkstyle-report.xml ./coverage.xml ./profile.cov yamllint-checkstyle.xml
+# target: help - Display available recipes.
+.PHONY: help
+help:
+	@egrep "^# target:" [Mm]akefile
 
-coverage: ## Run the tests of the project and export the coverage
-	$(GOTEST) -cover -covermode=count -coverprofile=profile.cov ./...
-	$(GOCMD) tool cover -func profile.cov
-ifeq ($(EXPORT_RESULT), true)
-	GO111MODULE=off go get -u github.com/AlekSi/gocov-xml
-	GO111MODULE=off go get -u github.com/axw/gocov/gocov
-	gocov convert profile.cov | gocov-xml > coverage.xml
-endif
 
-docker-build: ## Use the dockerfile to build the container
-	docker build --rm --tag $(BINARY_NAME) .
+## GIT
 
-docker-release: ## Release the container with tag latest and version
-	docker tag $(BINARY_NAME) $(DOCKER_REGISTRY)$(BINARY_NAME):latest
-	docker tag $(BINARY_NAME) $(DOCKER_REGISTRY)$(BINARY_NAME):$(VERSION)
-	# Push the docker images
-	docker push $(DOCKER_REGISTRY)$(BINARY_NAME):latest
-	docker push $(DOCKER_REGISTRY)$(BINARY_NAME):$(VERSION)
+# Get the latest tag of the commit history.
+.PHONY: git-latest-tag
+git-latest-tag:
+	@git describe --abbrev=0 --tags
 
-help: ## Show this help.
-	@echo ''
-	@echo 'Usage:'
-	@echo '  ${YELLOW}make${RESET} ${GREEN}<target>${RESET}'
-	@echo ''
-	@echo 'Targets:'
-	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  ${YELLOW}%-16s${GREEN}%s${RESET}\n", $$1, $$2}' $(MAKEFILE_LIST)
+# Get the tag of the current commit.
+.PHONY: git-commit-tag
+git-commit-tag:
+	@git describe --exact-match --tags HEAD
 
-lint: lint-go lint-dockerfile lint-yaml ## Run all available linters
+# Get the version tag of the current commit or default to 'dev-latest'.
+.PHONY: git-version-tag
+git-version-tag:
+	@(echo ${VERSION})
 
-lint-dockerfile: ## Lint your Dockerfile
-# If dockerfile is present we lint it.
-ifeq ($(shell test -e ./Dockerfile && echo -n yes),yes)
-	$(eval CONFIG_OPTION = $(shell [ -e $(shell pwd)/.hadolint.yaml ] && echo "-v $(shell pwd)/.hadolint.yaml:/root/.config/hadolint.yaml" || echo "" ))
-	$(eval OUTPUT_OPTIONS = $(shell [ "${EXPORT_RESULT}" == "true" ] && echo "--format checkstyle" || echo "" ))
-	$(eval OUTPUT_FILE = $(shell [ "${EXPORT_RESULT}" == "true" ] && echo "| tee /dev/tty > checkstyle-report.xml" || echo "" ))
-	docker run --rm -i $(CONFIG_OPTION) hadolint/hadolint hadolint $(OUTPUT_OPTIONS) - < ./Dockerfile $(OUTPUT_FILE)
-endif
+## Shell
 
-lint-go: ## Use golintci-lint on your project
-	$(eval OUTPUT_OPTIONS = $(shell [ "${EXPORT_RESULT}" == "true" ] && echo "--out-format checkstyle ./... | tee /dev/tty > checkstyle-report.xml" || echo "" ))
-	docker run --rm -v $(shell pwd):/app -w /app golangci/golangci-lint:latest-alpine golangci-lint run --deadline=65s $(OUTPUT_OPTIONS)
+# Run all go generate directives (code generation).
+.PHONY: shell-go-generate
+shell-go-generate:
+	go generate ./...
 
-lint-yaml: ## Use yamllint on the yaml file of your projects
-ifeq ($(EXPORT_RESULT), true)
-	GO111MODULE=off go get -u github.com/thomaspoignant/yamllint-checkstyle
-	$(eval OUTPUT_OPTIONS = | tee /dev/tty | yamllint-checkstyle > yamllint-checkstyle.xml)
-endif
-	docker run --rm -it -v $(shell pwd):/data cytopia/yamllint -f parsable $(shell git ls-files '*.yml' '*.yaml') $(OUTPUT_OPTIONS)
+# Generate mocks (for testing) from all interfaces.
+.PHONY: shell-go-generate-mocks
+shell-go-generate-mocks:
+	grep -rl cmd/ pkg/ internal/ -e 'type \s*[a-zA-Z0-9]\+\s* interface' | xargs -n 1 dirname | uniq | xargs -P 4 -I % sh -c 'mockery -name "[a-zA-Z0-9]*" -note "Run \`make generate-mocks\` to regenerate this file." -outpkg mocks -dir "%" -output "%/mocks"'
 
-test: ## Run the tests of the project
-ifeq ($(EXPORT_RESULT), true)
-	GO111MODULE=off go get -u github.com/jstemmer/go-junit-report
-	$(eval OUTPUT_OPTIONS = | tee /dev/tty | go-junit-report -set-exit-code > junit-report.xml)
-endif
-	$(GOTEST) -v -race ./... $(OUTPUT_OPTIONS)
+# Lint all go files.
+# No need to call `gofmt` since `golint` will be called.
+.PHONY: shell-go-lint
+shell-go-lint:
+	golangci-lint run
 
-vendor: ## Copy of all packages needed to support builds and tests in the vendor directory
-	$(GOCMD) mod vendor
+# Lint and fix (if possible) all go files.
+.PHONY: shell-go-fix
+shell-go-fix:
+	go fmt ./...
+	golangci-lint run --fix
+	go mod tidy
 
-watch: ## Run the code with cosmtrek/air to have automatic reload on changes
-	$(eval PACKAGE_NAME=$(shell head -n 1 go.mod | cut -d ' ' -f2))
-	docker run -it --rm -w /go/src/$(PACKAGE_NAME) -v $(shell pwd):/go/src/$(PACKAGE_NAME) -p $(SERVICE_PORT):$(SERVICE_PORT) cosmtrek/air
+# Build the go binary.
+.PHONY: shell-go-build
+shell-go-build:
+	CGO_ENABLED=0 go build ${GO_LDFLAGS} -o bin/quick-preview-api cmd/quick-preview-api/main.go
+
+# Run tests.
+.PHONY: shell-go-test
+shell-go-test:
+	go test ${GO_LDFLAGS} $(GO_TEST_FLAGS) ./...
+
+# Run the app.
+.PHONY: shell-go-run
+shell-go-run:
+	go run  ${GO_LDFLAGS} cmd/quick-preview-api/main.go $(filter-out $@,$(MAKECMDGOALS))
+
+# Clean the cache.
+.PHONY: shell-clean-cache
+shell-clean-cache:
+	rm -Rf $$PROJECT_ROOT/.cache
+
+
+## Shell aggregators
+
+.PHONY: shell-go-generate-lint
+shell-go-generate-lint: shell-go-generate shell-go-lint
+
+.PHONY: shell-go-fix-generate
+shell-go-fix-generate: shell-go-fix shell-go-generate
+
+.PHONY: shell-go-generate-build
+shell-go-generate-build: shell-go-generate shell-go-build
+
+.PHONY: shell-go-generate-test
+shell-go-generate-test: shell-go-generate shell-go-test
+
+.PHONY: shell-go-generate-run
+shell-go-generate-run: shell-go-generate shell-go-run
+
+
+## Docker
+
+# target: docker-sh - Run a sh shell inside the container.
+.PHONY: docker-sh
+docker-sh:
+	$(DOCKER_DEV_BUILD)
+	$(DOCKER_DEV_RUN_IT) sh
+
+# Run the linter inside the container.
+.PHONY: docker-lint-app
+docker-lint-app:
+	$(DOCKER_DEV_BUILD)
+	$(DOCKER_DEV_RUN) make shell-go-generate-lint
+
+# Generate mocks (for testing) from all interfaces inside the container.
+.PHONY: docker-generate-mocks
+docker-generate-mocks:
+	$(DOCKER_DEV_BUILD)
+	$(DOCKER_DEV_RUN) make shell-go-generate-mocks
+
+# Run the linter and fix (if possible) inside the container.
+.PHONY: docker-fix-app
+docker-fix-app:
+	$(DOCKER_DEV_BUILD)
+	$(DOCKER_DEV_RUN) make shell-go-fix-generate
+
+# Build the app inside the container.
+.PHONY: docker-build-app
+docker-build-app:
+	$(DOCKER_DEV_BUILD)
+	$(DOCKER_DEV_RUN) make shell-go-generate-build
+
+# Run app tests inside the container.
+.PHONY: docker-test-app
+docker-test-app:
+	$(DOCKER_DEV_BUILD)
+	$(DOCKER_DEV_RUN) make GO_TEST_FLAGS="$(GO_TEST_FLAGS)" shell-go-generate-test
+
+# Run the app inside the container.
+.PHONY: docker-run-app-only
+docker-run-app-only:
+	$(DOCKER_DEV_BUILD)
+	$(DOCKER_DEV_RUN_IT) make shell-go-generate-run
+
+# Run the app and its dependencies inside the container (docker-compose).
+.PHONY: docker-run-app
+docker-run-app:
+	$(DOCKER_DEV_BUILD)
+	${DOCKER_COMPOSE} up
+
+# Build the app container image.
+.PHONY: docker-build
+docker-build:
+	docker build -f build/package/Dockerfile --target production --tag $(REPOSITORY):${VERSION} .
+
+# Push the app container image.
+.PHONY: docker-push
+docker-push:
+	docker push ${REPOSITORY}:${VERSION}
+
+# Delete the container image and its assets.
+.PHONY: docker-clean
+docker-clean:
+	docker rmi -f $(DOCKER_LOCAL_IMAGE)
+
+
+## Alias
+
+# target: app-version - Get the current app version.
+.PHONY: app-version
+app-version: git-version-tag
+
+# target: generate-mocks - Generate mocks (inside the container).
+.PHONY: generate-mocks
+generate-mocks: docker-generate-mocks
+
+# target: lint - Run the linter (inside the container).
+.PHONY: lint
+lint: docker-lint-app
+
+# target: fix - Run the linter and fix issues if possible (runs inside the container). Good to be called on file save in an IDE.
+.PHONY: fix
+fix: docker-fix-app
+
+# target: build - Build the app (inside the container).
+.PHONY: build
+build: docker-build-app
+
+# target: test - Run app tests (inside the container).
+.PHONY: test
+test: docker-test-app
+
+# target: run - Run the app {inside the container}.
+.PHONY: run
+run: docker-run-app
+
+# target: clean - Clean cache and local docker image.
+.PHONY: clean
+clean: shell-clean-cache docker-clean
+
+# target: ci-lint - Lint the app (inside the CI environment).
+.PHONY: ci-lint
+ci-lint: shell-go-generate-lint
+
+# target: ci-test - Run app tests (inside the CI environment).
+.PHONY: ci-test
+ci-test: shell-go-generate-test
+
+# target: ci-build - Build the go binary (inside the CI environment).
+.PHONY: ci-build
+ci-build: shell-go-generate-build
+
+# target: ci-build-image - Build the app image (inside the CI environment).
+.PHONY: ci-build-image-image
+ci-build-image: docker-build docker-push
+
+# target: ci-deploy - Deploy using helm (inside the CI environment).
+.PHONY: ci-deploy
+ci-deploy:
+	./scripts/deploy.sh
+
+# target: check-swagger - Check swagger documentation if is up-to-date
+.PHONY: check-swagger
+check-swagger: shell-go-generate
+	git diff --exit-code api/openapi-spec/swagger.json api/openapi-spec/swagger.yaml

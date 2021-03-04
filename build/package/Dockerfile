@@ -10,24 +10,24 @@ RUN apt install make
 WORKDIR /opt/app
 
 
-# FROM base AS dependency-cache
-# COPY go.mod go.sum ./
-# RUN go mod download
-# #   go mod verify
-# ARG VERSION
-# ENV VERSION=$VERSION
+FROM base AS dependency-cache
+COPY go.mod go.sum ./
+RUN go mod download
+#   go mod verify
+ARG VERSION
+ENV VERSION=$VERSION
 
-# FROM dependency-cache AS development
-# CMD ["sleep infinity"]
+FROM dependency-cache AS development
+CMD ["sleep infinity"]
 
 
-# FROM dependency-cache AS build
-# COPY . .
-# RUN make shell-go-generate-build
+FROM dependency-cache AS build
+COPY . .
+RUN make shell-go-generate-build
 
-# FROM debian:10 as production
-# ENV GIN_MODE release
-# USER 2000:2000
-# WORKDIR /opt/app
-# COPY --from=build /opt/app/bin/quick-preview-api ./quick-preview-api
-# CMD ["./quick-preview-api"]
+FROM debian:10 as production
+ENV GIN_MODE release
+USER 2000:2000
+WORKDIR /opt/app
+COPY --from=build /opt/app/bin/quick-preview-api ./quick-preview-api
+CMD ["./quick-preview-api"]
