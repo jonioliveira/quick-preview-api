@@ -17,9 +17,9 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const GIT_REPO_PATH = "/tmp/gitrepo"
-
 const (
+	GithubRepoPath = "/tmp/gitrepo"
+
 	DeployGroup        = "/"
 	PostDeployEndpoint = "/deploy"
 )
@@ -70,7 +70,7 @@ func postPreviewHandler(ctx *gin.Context) {
 	}
 
 	// TODO: STEP_2 pass the path to the Dockerfile on the root of the git cloned project
-	port, err := getPortFromDockerfile(GIT_REPO_PATH + "/Dockerfile")
+	port, err := getPortFromDockerfile(GithubRepoPath + "/Dockerfile")
 	if err != nil {
 		ctx.Error(err)
 		return

@@ -30,6 +30,4 @@ require (
 	golang.org/x/sys v0.0.0-20210304124612-50617c2ba197 // indirect
 	golang.org/x/term v0.0.0-20210220032956-6a3ed077a48d // indirect
 	golang.org/x/tools v0.1.0 // indirect
-	gopkg.in/src-d/go-billy.v4 v4.3.2
-	gopkg.in/src-d/go-git.v4 v4.13.1
 )
