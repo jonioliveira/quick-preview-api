@@ -46,7 +46,7 @@ func postPreviewHandler(ctx *gin.Context) {
 	}
 
 	// TODO: STEP_2 pass the path to the Dockerfile on the root of the git cloned project
-	port, err := getPortFromDockerfile("/tmp/gitrepo/Dockerfile")
+	port, err := getPortFromDockerfile(GIT_REPO_PATH + "/Dockerfile")
 	if err != nil {
 		ctx.Error(err)
 		return
