@@ -82,28 +82,83 @@ func postPreviewHandler(ctx *gin.Context) {
 		}
 		return
 	}
-	println("port: ", port)
 
 	// TODO: STEP_3 build docker image and push to repository
+	release := deploy.Repository[strings.LastIndex(deploy.Repository, "/")+1:]
+	loginArgs := []string{
+		"login",
+		"-u",
+		"cmydummy",
+		"-p",
+		"cmydummy123456",
+	}
+
+	// docker login
+	loginOutput, err := RunCMD("docker", loginArgs)
+	if err != nil {
+		fmt.Println("Error:", loginOutput)
+		return
+	}
+
+	buildArgs := []string{
+		"build",
+		GithubRepoPath,
+		"-t",
+		"cmydummy/" + release,
+	}
+
+	// docker build
+	buildOutput, err := RunCMD("docker", buildArgs)
+	if err != nil {
+		fmt.Println("Error:", buildOutput)
+		return
+	}
+
+	pushArgs := []string{
+		"push",
+		"cmydummy/" + release,
+	}
+
+	// docker push
+	pushOutput, err := RunCMD("docker", pushArgs)
+	if err != nil {
+		fmt.Println("Error:", pushOutput)
+		return
+	}
+
+	logoutArgs := []string{
+		"logout",
+	}
+
+	// docker logout
+	logoutOutput, err := RunCMD("docker", logoutArgs)
+	if err != nil {
+		fmt.Println("Error:", logoutOutput)
+		return
+	}
 
 	// TODO: STEP_4 deploy helm with the image and pass the port for the service from EXPOSE
-	args := []string{
+	helmArgs := []string{
+		"upgrade",
+		release,
+		"deploy-chart",
 		"--atomic",
 		"--debug",
 		"--timeout 15m",
 		"--install",
 		"--namespace " + deploy.Namespace,
-		"--set image.repository=" + "some-image-url-from-docker-io",
+		"--set image.repository=cmydummy/" + release,
+		"--set ingress.port=" + port,
 		"--set image.tag=latest",
 	}
 
-	output, err := RunCMD("helm upgrade", args)
+	helmOutput, err := RunCMD("helm", helmArgs)
 	if err != nil {
-		fmt.Println("Error:", output)
+		fmt.Println("Error:", helmOutput)
 		return
 	}
 
-	fmt.Println("Result:", output)
+	fmt.Println("Result:", helmOutput)
 
 	ctx.JSON(http.StatusOK, "Deployed at: ${FILL WITH DNS FROM CMY}")
 }
@@ -176,7 +231,7 @@ func RunCMD(path string, args []string) (out string, err error) {
 
 	if err != nil {
 		fmt.Println("RunCMD ERROR")
-		fmt.Println(out)
+		fmt.Println(err)
 	}
 
 	return
