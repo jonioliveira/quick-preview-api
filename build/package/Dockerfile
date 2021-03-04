@@ -1,11 +1,11 @@
 FROM quickpreview/base:latest as tools
 ENV GO111MODULE on
-RUN curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.27.0 && \
-  go get -u github.com/swaggo/swag/cmd/swag@v1.6.5 && \
-  go get github.com/vektra/mockery/.../@v1.0.0
+# RUN curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.27.0 && \
+#   go get -u github.com/swaggo/swag/cmd/swag@v1.6.5 && \
+#   go get github.com/vektra/mockery/.../@v1.0.0 
 
 FROM quickpreview/base:latest AS base
-COPY --from=tools /root/go/bin/golangci-lint /root/go/bin/swag /root/go/bin/mockery /go/bin/
+# COPY --from=tools /root/go/bin/golangci-lint /root/go/bin/swag /root/go/bin/mockery /go/bin/
 RUN apt install make
 WORKDIR /opt/app
 
@@ -18,14 +18,20 @@ ARG VERSION
 ENV VERSION=$VERSION
 
 FROM dependency-cache AS development
+ENV GOPATH /go
+ENV PATH $GOPATH/bin:$PATH
 CMD ["sleep infinity"]
 
 
 FROM dependency-cache AS build
+ENV GOPATH /go
+ENV PATH $GOPATH/bin:$PATH
 COPY . .
 RUN make shell-go-generate-build
 
 FROM debian:10 as production
+ENV GOPATH /go
+ENV PATH $GOPATH/bin:$PATH
 ENV GIN_MODE release
 USER 2000:2000
 WORKDIR /opt/app
