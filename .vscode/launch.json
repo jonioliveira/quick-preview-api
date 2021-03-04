@@ -6,7 +6,7 @@
             "type": "go",
             "request": "launch",
             "mode": "auto",
-            "program": "${workspaceFolder}/cmd/quick-preview/main.go",
+            "program": "${workspaceFolder}/cmd/quick-preview-api/main.go",
             "args": []
         }
     ]
