@@ -1,7 +1,10 @@
 package preview
 
 import (
+	"bufio"
+	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/gin-gonic/gin"
 )
@@ -25,5 +28,38 @@ func postPreviewHandler(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, "")
+	// TODO: STEP_1 clone the git repository
+
+	// TODO: STEP_2 pass the path to the Dockerfile on the root of the git cloned project
+	port, err := getPortFromDockerfile("./Dockerfile")
+	if err != nil {
+		panic(err)
+	}
+
+	// TODO: STEP_3 build docker image and push to repository
+
+	// TODO: STEP_4 deploy helm with the image and pass the port for the service from EXPOSE
+}
+
+func getPortFromDockerfile(pathToDockerfile string) (string, error) {
+	foundExpose := false
+	file, err := os.Open(pathToDockerfile)
+	if err != nil {
+		return "", fmt.Errorf("Error: ", err)
+	}
+	defer file.Close()
+	scanner := bufio.NewScanner(file)
+	scanner.Split(bufio.ScanWords)
+	for scanner.Scan() {
+		if scanner.Text() == "EXPOSE" {
+			foundExpose = true
+		}
+		if foundExpose == true && scanner.Text() != "EXPOSE" {
+			return scanner.Text(), nil
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return "", fmt.Errorf("Error: ", err)
+	}
+	return "", nil
 }
