@@ -1,0 +1,18 @@
+version: "3.8"
+services:
+  quick-preview-api:
+    container_name: quick-preview-api
+    image: quickpreview/api:dev-local
+    environment:
+      GOCACHE: /.cache/go-build
+      GOLANGCI_LINT_CACHE: /.cache/golangci-lint
+    command:
+      - make
+      - shell-go-generate
+      - shell-go-run
+    volumes:
+      - $PROJECT_ROOT:/opt/app/
+      - /opt/app/bin
+      - $PROJECT_ROOT/.cache/:/.cache/
+    ports:
+      - 8081:8081
