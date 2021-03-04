@@ -15,7 +15,6 @@ import (
 
 func main() {
 	logger.New(logger.DebugLevel)
-	logger.Info("Initialized")
 
 	router := router.BuildRouter()
 	srv := &http.Server{

@@ -20,8 +20,10 @@ func AddPreviewRoutes(rg *gin.RouterGroup) {
 func postPreviewHandler(ctx *gin.Context) {
 	var newPreview Preview
 	err := ctx.Bind(&newPreview)
-
-	if err == nil {
-		ctx.JSON(http.StatusOK, "")
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, "")
+		return
 	}
+
+	ctx.JSON(http.StatusOK, "")
 }

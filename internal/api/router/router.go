@@ -2,7 +2,7 @@ package router
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/jonioliveira/quick-preview-api/internal/preview"
+	"github.com/jonioliveira/quick-preview-api/internal/api/preview"
 	ginprometheus "github.com/zsais/go-gin-prometheus"
 )
 
