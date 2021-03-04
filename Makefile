@@ -14,7 +14,7 @@ GO_TEST_FLAGS?=-count=1 -p=4
 PORT?=8081
 DOCKER_LOCAL_IMAGE=$(REPOSITORY):dev-local
 DOCKER_DEV_BUILD=docker build -f build/package/Dockerfile --target development --tag $(DOCKER_LOCAL_IMAGE) --build-arg VERSION .
-DOCKER_RUN_BASE=docker run --rm -v $$PROJECT_ROOT:/opt/app/ -v /opt/app/bin -v $$PROJECT_ROOT/.cache/:/.cache/ -p $(PORT):8080 -e GOCACHE=/.cache/go-build -e GOLANGCI_LINT_CACHE=/.cache/golangci-lint
+DOCKER_RUN_BASE=docker run --rm -v $$PROJECT_ROOT:/opt/app/ -v /opt/app/bin -v $$PROJECT_ROOT/.cache/:/.cache/ -v /var/run/docker.sock:/var/run/docker.sock -p $(PORT):8081 -e GOCACHE=/.cache/go-build -e GOLANGCI_LINT_CACHE=/.cache/golangci-lint
 DOCKER_DEV_RUN=$(DOCKER_RUN_BASE) $(DOCKER_LOCAL_IMAGE)
 DOCKER_DEV_RUN_IT=$(DOCKER_RUN_BASE) -it $(DOCKER_LOCAL_IMAGE)
 DOCKER_COMPOSE=docker-compose -f deployments/docker/compose.yaml -p quick-preview-api
