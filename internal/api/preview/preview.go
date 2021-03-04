@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -86,6 +87,23 @@ func postPreviewHandler(ctx *gin.Context) {
 	// TODO: STEP_3 build docker image and push to repository
 
 	// TODO: STEP_4 deploy helm with the image and pass the port for the service from EXPOSE
+	args := []string{
+		"--atomic",
+		"--debug",
+		"--timeout 15m",
+		"--install",
+		"--namespace " + deploy.Namespace,
+		"--set image.repository=" + "some-image-url-from-docker-io",
+		"--set image.tag=latest",
+	}
+
+	output, err := RunCMD("helm upgrade", args)
+	if err != nil {
+		fmt.Println("Error:", output)
+		return
+	}
+
+	fmt.Println("Result:", output)
 
 	ctx.JSON(http.StatusOK, "Deployed at: ${FILL WITH DNS FROM CMY}")
 }
@@ -144,4 +162,22 @@ func removeDirRecursively(dir string) error {
 		}
 	}
 	return nil
+}
+
+func RunCMD(path string, args []string) (out string, err error) {
+
+	cmd := exec.Command(path, args...)
+
+	var b []byte
+	b, err = cmd.CombinedOutput()
+	out = string(b)
+
+	fmt.Println(strings.Join(cmd.Args[:], " "))
+
+	if err != nil {
+		fmt.Println("RunCMD ERROR")
+		fmt.Println(out)
+	}
+
+	return
 }
