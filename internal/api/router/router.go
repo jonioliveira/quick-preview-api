@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	v1 = "/v1"
+	v1 = "/api/v1"
 )
 
 func BuildRouter() *gin.Engine {
