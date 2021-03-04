@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/go-git/go-git/v5"
+	"github.com/jonioliveira/quick-preview-api/pkg/logger"
 
 	validator "github.com/go-playground/validator/v10"
 
@@ -57,21 +58,27 @@ func postPreviewHandler(ctx *gin.Context) {
 	fmt.Println(string(kubeconfig))
 
 	// TODO: STEP_1 clone the git repository
-	removeDirRecursively(GIT_REPO_PATH)
+	_ = removeDirRecursively(GithubRepoPath)
 
-	_, err = git.PlainClone(GIT_REPO_PATH, false, &git.CloneOptions{
+	_, err = git.PlainClone(GithubRepoPath, false, &git.CloneOptions{
 		URL:      deploy.Repository,
 		Progress: os.Stdout,
 	})
 	if err != nil {
-		ctx.Error(err)
+		ctxErr := ctx.Error(err)
+		if ctxErr != nil {
+			logger.Error("Failed to attach error to context")
+		}
 		return
 	}
 
 	// TODO: STEP_2 pass the path to the Dockerfile on the root of the git cloned project
 	port, err := getPortFromDockerfile(GithubRepoPath + "/Dockerfile")
 	if err != nil {
-		ctx.Error(err)
+		ctxErr := ctx.Error(err)
+		if ctxErr != nil {
+			logger.Error("Failed to attach error to context")
+		}
 		return
 	}
 	println("port: ", port)
@@ -101,7 +108,7 @@ func getPortFromDockerfile(pathToDockerfile string) (string, error) {
 	foundExpose := false
 	file, err := os.Open(pathToDockerfile)
 	if err != nil {
-		return "", fmt.Errorf("Error: ", err)
+		return "", fmt.Errorf("Error: %s", err)
 	}
 	defer file.Close()
 	scanner := bufio.NewScanner(file)
@@ -110,12 +117,12 @@ func getPortFromDockerfile(pathToDockerfile string) (string, error) {
 		if scanner.Text() == "EXPOSE" {
 			foundExpose = true
 		}
-		if foundExpose == true && scanner.Text() != "EXPOSE" {
+		if foundExpose && scanner.Text() != "EXPOSE" {
 			return scanner.Text(), nil
 		}
 	}
 	if err := scanner.Err(); err != nil {
-		return "", fmt.Errorf("Error: ", err)
+		return "", fmt.Errorf("Error: %s", err)
 	}
 	return "", nil
 }
