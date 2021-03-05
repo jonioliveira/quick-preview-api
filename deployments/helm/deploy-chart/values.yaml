@@ -13,22 +13,26 @@ imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
 
-podSecurityContext:
-  fsGroup: 2000
+# podSecurityContext:
+#   fsGroup: 2000
 
-securityContext:
-  runAsNonRoot: true
-  runAsUser: 2000
+# securityContext:
+#   runAsNonRoot: true
+#   runAsUser: 2000
 
 service:
-  type: LoadBalancer
+  type: ClusterIP
   port: 8080
 
 ingress:
   enabled: true
-   annotations:
+  annotations:
     kubernetes.io/ingress.class: quick-preview-ig
-  hosts:
-    - host: deploy.quick-preview.cloud.eu1.cloudmobility.io
-      paths:
-        - /(.*)
+  host: deploy.quick-preview.cloud.eu1.cloudmobility.io
+  # hosts:
+  #   - host: 
+  #     paths:
+  #       - /(.*)
+
+serviceAccount:
+  create: ""

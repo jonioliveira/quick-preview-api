@@ -149,7 +149,8 @@ func postPreviewHandler(ctx *gin.Context) {
 		"--install",
 		"--namespace " + deploy.Namespace,
 		"--set image.repository=cmydummy/" + release,
-		"--set ingress.port=" + port,
+		"--set service.port=" + port,
+		"--set ingress.hosts.host=" + release + ".quick-preview.cloud.eu1.cloudmobility.io",
 		"--set image.tag=latest",
 	}
 
