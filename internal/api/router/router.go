@@ -2,6 +2,7 @@ package router
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/jonioliveira/quick-preview-api/internal/api/health"
 	"github.com/jonioliveira/quick-preview-api/internal/api/preview"
 	ginprometheus "github.com/zsais/go-gin-prometheus"
 )
@@ -17,6 +18,7 @@ func BuildRouter() *gin.Engine {
 
 	apiV1 := router.Group(v1)
 	preview.AddPreviewRoutes(apiV1)
+	health.AddHealthRoutes(apiV1)
 
 	return router
 }
