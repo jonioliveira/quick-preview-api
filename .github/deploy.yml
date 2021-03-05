@@ -10,12 +10,9 @@ jobs:
     - name: 'Deploy'
       uses: 'deliverybot/helm@v1'
       with:
-        release: 'nginx'
-        namespace: 'default'
-        chart: 'app'
-        token: '${{ github.token }}'
-        values: |
-          name: foobar
+        release: 'quick-preview-api'
+        namespace: 'quick-preview-a1f1a'
+        chart: 'quick-preview-api'
         value-files: >-
         [
           "values.yaml", 
