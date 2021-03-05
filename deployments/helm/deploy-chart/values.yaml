@@ -13,12 +13,12 @@ imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
 
-# podSecurityContext:
-#   fsGroup: 2000
+podSecurityContext:
+  fsGroup: 2000
 
-# securityContext:
-#   runAsNonRoot: true
-#   runAsUser: 2000
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 2000
 
 service:
   type: ClusterIP
