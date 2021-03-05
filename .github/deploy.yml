@@ -1,4 +1,4 @@
-name: Deploy
+name: 'Deploy'
 on: ['deployment']
 
 jobs:
@@ -13,9 +13,6 @@ jobs:
         release: 'quick-preview-api'
         namespace: 'quick-preview-a1f1a'
         chart: 'quick-preview-api'
-        value-files: >-
-        [
-          "values.yaml", 
-        ]
+        helm: 'helm3'
       env:
-        KUBECONFIG_FILE: '${{ secrets.KUBECONFIG }}
+        KUBECONFIG_FILE: '${{ secrets.KUBECONFIG }}'
