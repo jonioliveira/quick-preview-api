@@ -56,7 +56,8 @@ func postPreviewHandler(ctx *gin.Context) {
 	}
 
 	// decoded kubeconfig
-	fmt.Println(string(kubeconfig))
+	os.Setenv("KUBECONFIG", string(kubeconfig))
+	//os.Getenv("KUBECONFIG")
 
 	// TODO: STEP_1 clone the git repository
 	_ = removeDirRecursively(GithubRepoPath)
