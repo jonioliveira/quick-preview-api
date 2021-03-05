@@ -220,7 +220,6 @@ func removeDirRecursively(dir string) error {
 }
 
 func RunCMD(path string, args []string) (out string, err error) {
-
 	cmd := exec.Command(path, args...)
 
 	var b []byte
